@@ -35,6 +35,13 @@ class EventRepository:
         )
         await self.session.commit()
 
+    async def get_pending_advance_notifications(self) -> list[Event]:
+        """Return events not yet advance-notified (saved by local parser)."""
+        result = await self.session.execute(
+            select(Event).where(Event.notified_advance.is_(False))
+        )
+        return list(result.scalars().all())
+
     async def get_pending_today_notifications(self, notify_before_minutes: int) -> list[Event]:
         """Return events whose sale opens within the next notify_before_minutes and haven't been notified yet."""
         now = datetime.now(timezone.utc)

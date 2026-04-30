@@ -8,32 +8,19 @@ from config import get_settings
 logger = logging.getLogger(__name__)
 
 
-async def _parse_and_notify() -> None:
-    """Fetch new announcements and send advance notifications for new events."""
-    from parser.scraper import fetch_announcements
-    from parser.extractor import event_to_dict
+async def _send_pending_advance_notifications() -> None:
+    """Send advance notifications for events saved by the local parser."""
     from db import get_session
     from db.repository import EventRepository
     from bot.notifications import send_advance_notification
 
-    settings = get_settings()
-    logger.info("Scheduled parse started")
+    async with get_session() as session:
+        repo = EventRepository(session)
+        events = await repo.get_pending_advance_notifications()
 
-    events = await fetch_announcements(settings.bolshoi_news_url)
-    new_count = 0
-
-    for ev in events:
-        async with get_session() as session:
-            repo = EventRepository(session)
-            existing = await repo.get_by_source_url(ev.source_url)
-            if existing:
-                continue
-            db_event = await repo.create(**event_to_dict(ev))
-
-        await send_advance_notification(db_event)
-        new_count += 1
-
-    logger.info("Parse complete: %d new event(s)", new_count)
+    for event in events:
+        await send_advance_notification(event)
+        logger.info("Advance notification sent for event %d '%s'", event.id, event.title)
 
 
 async def _check_today_notifications() -> None:
@@ -43,17 +30,16 @@ async def _check_today_notifications() -> None:
 
 
 def create_scheduler() -> AsyncIOScheduler:
-    settings = get_settings()
     scheduler = AsyncIOScheduler()
 
     scheduler.add_job(
-        _parse_and_notify,
-        trigger=IntervalTrigger(hours=settings.parse_interval_hours),
-        id="parse_announcements",
-        name="Parse bolshoi.ru announcements",
+        _send_pending_advance_notifications,
+        trigger=IntervalTrigger(minutes=30),
+        id="advance_notifications",
+        name="Send advance notifications for new events",
         replace_existing=True,
         max_instances=1,
-        misfire_grace_time=600,
+        misfire_grace_time=60,
     )
 
     scheduler.add_job(
