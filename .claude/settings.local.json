@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/bot' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/parser' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/db/migrations/versions' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/deploy')",
+      "Bash(touch 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/bot/__init__.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/parser/__init__.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/db/__init__.py')",
+      "Bash(touch 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/bot/main.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/bot/handlers.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/bot/notifications.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/bot/scheduler.py')",
+      "Bash(touch 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/parser/scraper.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/parser/extractor.py')",
+      "Bash(touch 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/db/models.py' 'D:/YandexDisk/Ай-ти Джет/python/MAX боты/Доступный Большой/db/repository.py')"
+    ]
+  }
+}

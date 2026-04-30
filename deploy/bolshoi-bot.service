@@ -1,0 +1,17 @@
+[Unit]
+Description=Bolshoi Theatre Bot for MAX Messenger
+After=network.target
+
+[Service]
+Type=simple
+User=bolshoi-bot
+WorkingDirectory=/home/bolshoi-bot/bolshoi-bot
+EnvironmentFile=/home/bolshoi-bot/bolshoi-bot/.env
+ExecStart=/home/bolshoi-bot/bolshoi-bot/venv/bin/python -m bot.main
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/var/log/bolshoi-bot/bot.log
+StandardError=append:/var/log/bolshoi-bot/bot.log
+
+[Install]
+WantedBy=multi-user.target

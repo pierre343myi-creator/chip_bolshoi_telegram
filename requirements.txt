@@ -1,0 +1,10 @@
+pydantic-settings
+sqlalchemy[asyncio]
+asyncpg
+alembic
+httpx
+beautifulsoup4
+lxml
+apscheduler
+aiohttp
+python-dateutil

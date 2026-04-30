@@ -1,2 +1,32 @@
 .ssh/
 venv/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSL certificates (created on VM, not stored in repo)
+*.crt
+*.pem
+*.key
