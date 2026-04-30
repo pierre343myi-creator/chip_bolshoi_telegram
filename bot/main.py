@@ -86,6 +86,9 @@ def setup_logging(log_level: str, log_file: str) -> None:
     root = logging.getLogger()
     root.setLevel(getattr(logging, log_level.upper(), logging.INFO))
 
+    if root.handlers:
+        return  # already configured (e.g. double-call on restart)
+
     console = logging.StreamHandler(sys.stdout)
     console.setFormatter(fmt)
     root.addHandler(console)
