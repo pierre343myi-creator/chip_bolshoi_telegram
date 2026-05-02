@@ -10,6 +10,9 @@ echo "[setup] Installing dependencies..."
 pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 
+echo "[setup] Downloading Camoufox browser..."
+python -m camoufox fetch
+
 echo "[setup] Downloading Yandex Cloud SSL certificate..."
 mkdir -p ~/.postgresql
 wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \

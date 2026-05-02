@@ -8,3 +8,5 @@ lxml
 apscheduler
 aiohttp
 python-dateutil
+playwright
+camoufox[geoip]

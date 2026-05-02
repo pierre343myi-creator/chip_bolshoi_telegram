@@ -9,6 +9,9 @@ echo "[update] Installing/updating dependencies..."
 source venv/bin/activate
 pip install -r requirements.txt --quiet
 
+echo "[update] Fetching Camoufox browser (skipped if already downloaded)..."
+python -m camoufox fetch
+
 echo "[update] Applying database migrations..."
 alembic upgrade head
 

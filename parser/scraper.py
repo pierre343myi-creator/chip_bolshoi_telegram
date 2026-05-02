@@ -1,6 +1,8 @@
 """
 Scraper for bolshoi.ru/news/obyavleniya/.
 
+Uses Camoufox (fingerprint-resistant Firefox) to bypass QRATOR.
+
 Run in test mode (no DB writes, no notifications):
     python -m parser.scraper --test
 """
@@ -10,8 +12,9 @@ import json
 import logging
 from typing import Any
 
-import httpx
 from bs4 import BeautifulSoup
+from camoufox.async_api import AsyncCamoufox
+from playwright.async_api import Page
 
 from parser.extractor import ExtractedEvent, extract_event
 
@@ -27,33 +30,25 @@ KEYWORDS = [
     "специальные программы",
 ]
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-}
-
 RETRY_DELAY_SECONDS = 1800  # 30 minutes between retries
 MAX_RETRIES = 3
 
 
-async def _fetch(url: str, client: httpx.AsyncClient, retries: int = MAX_RETRIES) -> str | None:
+async def _fetch_page(page: Page, url: str, retries: int = MAX_RETRIES) -> str | None:
     for attempt in range(1, retries + 1):
         try:
-            resp = await client.get(url, timeout=30)
-            resp.raise_for_status()
-            return resp.text
-        except httpx.HTTPStatusError as e:
-            logger.warning("[%d/%d] HTTP %s for %s", attempt, retries, e.response.status_code, url)
-        except httpx.RequestError as e:
-            logger.warning("[%d/%d] Request error for %s: %s", attempt, retries, url, e)
+            # networkidle ensures QRATOR JS challenge completes before we read content
+            await page.goto(url, timeout=90000, wait_until="networkidle")
+            content = await page.content()
+            if content and len(content) > 1000:
+                if "__qrator" in content:
+                    logger.warning("[%d/%d] QRATOR challenge not resolved for %s", attempt, retries, url)
+                else:
+                    return content
+            else:
+                logger.warning("[%d/%d] Got empty/short page for %s", attempt, retries, url)
+        except Exception as e:
+            logger.warning("[%d/%d] Error fetching %s: %s", attempt, retries, url, e)
         if attempt < retries:
             logger.info("Retrying %s in 30 minutes…", url)
             await asyncio.sleep(RETRY_DELAY_SECONDS)
@@ -71,7 +66,6 @@ def _parse_list_page(html: str) -> list[dict[str, str]]:
     soup = BeautifulSoup(html, "lxml")
     items: list[dict[str, str]] = []
 
-    # bolshoi.ru uses various structures; try multiple selectors in order of specificity
     candidates: list[Any] = (
         soup.select("article.news-item")
         or soup.select("div.news-item")
@@ -103,11 +97,14 @@ def _parse_list_page(html: str) -> list[dict[str, str]]:
 
 
 async def fetch_announcements(news_url: str) -> list[ExtractedEvent]:
-    """Fetch and parse all relevant announcements. Returns list of ExtractedEvent."""
+    """Fetch and parse all relevant announcements using Camoufox (fingerprint-resistant Firefox)."""
     events: list[ExtractedEvent] = []
 
-    async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
-        html = await _fetch(news_url, client)
+    async with AsyncCamoufox(headless=True, geoip=True) as browser:
+        logger.info("Launched Camoufox")
+        page = await browser.new_page()
+
+        html = await _fetch_page(page, news_url)
         if not html:
             return events
 
@@ -117,13 +114,12 @@ async def fetch_announcements(news_url: str) -> list[ExtractedEvent]:
             return events
 
         for item in items:
-            article_html = await _fetch(item["url"], client)
+            article_html = await _fetch_page(page, item["url"])
             if not article_html:
                 continue
             event = extract_event(article_html, item["url"])
             if event:
                 events.append(event)
-            # Small polite delay between article requests
             await asyncio.sleep(1)
 
     return events
