@@ -37,9 +37,12 @@ MAX_RETRIES = 3
 async def _fetch_page(page: Page, url: str, retries: int = MAX_RETRIES) -> str | None:
     for attempt in range(1, retries + 1):
         try:
-            # networkidle ensures QRATOR JS challenge completes before we read content
-            await page.goto(url, timeout=90000, wait_until="networkidle")
+            await page.goto(url, timeout=90000, wait_until="domcontentloaded")
+            # Give QRATOR JS time to run and redirect
+            await page.wait_for_timeout(8000)
             content = await page.content()
+            logger.info("[%d/%d] Page length: %d chars", attempt, retries, len(content))
+            logger.info("[%d/%d] Content preview: %.300s", attempt, retries, content[:300])
             if content and len(content) > 1000:
                 if "__qrator" in content:
                     logger.warning("[%d/%d] QRATOR challenge not resolved for %s", attempt, retries, url)
