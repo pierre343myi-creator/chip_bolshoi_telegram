@@ -309,26 +309,26 @@ curl https://ваш-домен.ru/healthcheck
 
 ### 3.8. Запускаем бота как службу systemd
 
-В проекте уже есть готовый файл службы `deploy/bolshoi-bot.service`.
+В проекте уже есть готовый файл службы `deploy/bolshoi-bot.service` — он рассчитан на пользователя `bolshoi-bot` и папку `/home/bolshoi-bot/chip_bolshoi_max` (ровно туда вы склонировали проект на шаге 3.4), поэтому копируется без изменений:
 
 ```bash
 sudo cp /home/bolshoi-bot/chip_bolshoi_max/deploy/bolshoi-bot.service \
         /etc/systemd/system/
 
-# Внутри файла указан путь /home/bolshoi-bot/bolshoi-bot — если вы клонировали
-# в папку chip_bolshoi_max, поправьте WorkingDirectory, ExecStart и
-# EnvironmentFile в этом файле под свой путь:
-sudo nano /etc/systemd/system/bolshoi-bot.service
-
 sudo systemctl daemon-reload
-sudo systemctl enable bolshoi-bot
-sudo systemctl start bolshoi-bot
-sudo systemctl status bolshoi-bot
+sudo systemctl enable bolshoi-bot     # автозапуск при перезагрузке сервера
+sudo systemctl start bolshoi-bot      # запускаем сейчас
+sudo systemctl status bolshoi-bot     # проверяем, что статус active (running)
 ```
 
-При старте бот сам зарегистрирует webhook в Telegram (вызовет метод
-`setWebhook` с вашим `WEBHOOK_URL`). Отправьте боту `/start` — если пришёл ответ,
-всё работает. 🎉
+> Если вы клонировали проект в другую папку или под другим пользователем —
+> откройте `sudo nano /etc/systemd/system/bolshoi-bot.service` и поправьте под
+> себя три строки: `User`, `WorkingDirectory`, `EnvironmentFile` и `ExecStart`
+> (путь к `venv/bin/python`).
+
+При старте бот сам зарегистрирует webhook в Telegram (вызовет метод `setWebhook` с вашим `WEBHOOK_URL`). Теперь откройте своего бота в Telegram и отправьте `/start` — если пришёл ответ с подтверждением подписки, значит всё работает. 🎉
+
+Если ответа нет — загляните в логи (команды в разделе ниже) и в [«Частые проблемы»](#частые-проблемы).
 
 ### Просмотр логов
 
