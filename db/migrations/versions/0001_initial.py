@@ -43,7 +43,8 @@ def upgrade() -> None:
 
     op.create_table(
         "subscribers",
-        sa.Column("max_user_id", sa.Integer(), nullable=False),
+        # Telegram user/chat IDs can exceed the 32-bit range → BigInteger.
+        sa.Column("telegram_user_id", sa.BigInteger(), nullable=False),
         sa.Column(
             "subscribed_at",
             sa.DateTime(timezone=True),
@@ -51,7 +52,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("active", sa.Boolean(), nullable=False, server_default="true"),
-        sa.PrimaryKeyConstraint("max_user_id"),
+        sa.PrimaryKeyConstraint("telegram_user_id"),
     )
 
 
