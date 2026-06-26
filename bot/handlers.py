@@ -1,9 +1,10 @@
 """
-Command handlers for MAX Bot webhook updates.
+Command handlers for Telegram Bot webhook updates.
 
-MAX Bot API update_type values (TamTam-compatible):
-  - message_created  — new message from user
-  - bot_started      — user pressed Start or opened bot for first time
+Telegram delivers a JSON Update for every interaction. The bot reacts to plain
+text messages; commands are ordinary messages whose text starts with '/'.
+When a user first opens the bot and presses "Start", Telegram simply sends a
+message with the text "/start", so no special "bot started" event is needed.
 """
 import logging
 from datetime import timezone
@@ -16,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 HELP_TEXT = (
     "Команды бота:\n"
-    "/подписаться — подписаться на уведомления об открытии продаж\n"
-    "/отписаться — отписаться от уведомлений\n"
-    "/расписание — ближайшие продажи по программе «Доступный Большой»\n"
-    "/статус — проверить вашу подписку\n"
-    "/помощь — это сообщение"
+    "/подписаться (/subscribe) — подписаться на уведомления об открытии продаж\n"
+    "/отписаться (/unsubscribe) — отписаться от уведомлений\n"
+    "/расписание (/schedule) — ближайшие продажи по программе «Доступный Большой»\n"
+    "/статус (/status) — проверить вашу подписку\n"
+    "/помощь (/help) — это сообщение"
 )
 
 
@@ -96,13 +97,23 @@ async def _handle_help(user_id: int) -> None:
 
 
 _COMMAND_MAP = {
+    # subscribe
     "/start": _handle_subscribe,
     "/подписаться": _handle_subscribe,
+    "/subscribe": _handle_subscribe,
+    # unsubscribe
     "/стоп": _handle_unsubscribe,
     "/отписаться": _handle_unsubscribe,
+    "/unsubscribe": _handle_unsubscribe,
+    "/stop": _handle_unsubscribe,
+    # schedule
     "/расписание": _handle_schedule,
-    "/помощь": _handle_help,
+    "/schedule": _handle_schedule,
+    # status
     "/статус": _handle_status,
+    "/status": _handle_status,
+    # help
+    "/помощь": _handle_help,
     "/help": _handle_help,
 }
 
@@ -110,6 +121,9 @@ _COMMAND_MAP = {
 async def dispatch(user_id: int, text: str) -> None:
     """Route incoming message text to the appropriate handler."""
     cmd = text.strip().split()[0].lower() if text.strip() else ""
+    # In groups Telegram appends the bot username, e.g. "/start@MyBot".
+    if "@" in cmd:
+        cmd = cmd.split("@", 1)[0]
     handler = _COMMAND_MAP.get(cmd)
     if handler:
         try:
