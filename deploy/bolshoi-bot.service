@@ -1,5 +1,5 @@
 [Unit]
-Description=Bolshoi Theatre Bot for MAX Messenger
+Description=Bolshoi Theatre Bot for Telegram Messenger
 After=network.target
 
 [Service]
