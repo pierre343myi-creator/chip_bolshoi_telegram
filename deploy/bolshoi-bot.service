@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=bolshoi-bot
-WorkingDirectory=/home/bolshoi-bot/chip_bolshoi_max
-EnvironmentFile=/home/bolshoi-bot/chip_bolshoi_max/.env
-ExecStart=/home/bolshoi-bot/chip_bolshoi_max/venv/bin/python -m bot.main
+WorkingDirectory=/home/bolshoi-bot/chip_bolshoi_telegram
+EnvironmentFile=/home/bolshoi-bot/chip_bolshoi_telegram/.env
+ExecStart=/home/bolshoi-bot/chip_bolshoi_telegram/venv/bin/python -m bot.main
 Restart=on-failure
 RestartSec=10
 StandardOutput=append:/var/log/bolshoi-bot/bot.log
