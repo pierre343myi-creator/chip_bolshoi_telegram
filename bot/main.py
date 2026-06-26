@@ -5,7 +5,7 @@ Starts:
   1. PostgreSQL connection pool
   2. aiohttp webhook server  (POST /webhook, GET /healthcheck)
   3. APScheduler (parse every N hours, check today-notifications every 30 min)
-  4. Registers webhook URL with MAX Bot API
+  4. Registers webhook URL with Telegram Bot API
 
 Run:
     python -m bot.main
@@ -38,24 +38,22 @@ async def handle_webhook(request: web.Request) -> web.Response:
     except Exception:
         return web.Response(status=400, text="Bad JSON")
 
-    update_type = update.get("update_type", "")
+    # Telegram delivers a JSON-serialized Update object. For a notification
+    # bot we only care about plain text messages (new or edited).
+    message = update.get("message") or update.get("edited_message")
 
-    if update_type in ("message_created", "bot_started"):
-        message = update.get("message", {})
-        sender = message.get("sender", {})
-        user_id: int | None = sender.get("user_id")
-        body = message.get("body", {})
-        text: str = body.get("text", "") or ""
+    if message:
+        chat = message.get("chat", {})
+        chat_id: int | None = chat.get("id")
+        text: str = message.get("text", "") or ""
 
-        if not user_id:
-            return web.Response(status=200)
+        # In a 1-on-1 bot chat the chat id equals the user id; we use chat id
+        # as the canonical identifier both for storing subscribers and for
+        # sending replies.
+        if chat_id is not None:
+            asyncio.create_task(dispatch(chat_id, text))
 
-        # For bot_started treat as /start
-        if update_type == "bot_started":
-            text = "/start"
-
-        asyncio.create_task(dispatch(user_id, text))
-
+    # Always answer 200 quickly so Telegram does not retry / back off.
     return web.Response(status=200, text="ok")
 
 
