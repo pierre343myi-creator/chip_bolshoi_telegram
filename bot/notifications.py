@@ -1,8 +1,8 @@
 """
-MAX Bot API client and notification broadcast logic.
+Telegram Bot API client and notification broadcast logic.
 
-MAX Bot API is based on TamTam API.
-Docs: https://dev.max.ru/docs-api/
+All requests go to https://api.telegram.org/bot<TOKEN>/<METHOD>.
+Docs: https://core.telegram.org/bots/api
 """
 import asyncio
 import logging
@@ -17,9 +17,10 @@ from db.repository import EventRepository, SubscriberRepository
 
 logger = logging.getLogger(__name__)
 
-# MAX Bot API rate limit: stay well under 20 RPS
-_SEND_DELAY = 0.06          # ~16 msg/sec
-_RETRY_DELAY = 300          # 5 minutes between retries
+# Telegram limit for bulk notifications is ~30 messages/sec overall.
+# 0.06s delay → ~16 msg/sec, comfortably under the limit.
+_SEND_DELAY = 0.06
+_RETRY_DELAY = 3            # seconds between retries on transient errors
 _MAX_SEND_RETRIES = 2
 
 
@@ -91,23 +92,44 @@ def build_today_message(event: Event) -> str:
 
 async def _post_message(
     session: aiohttp.ClientSession,
-    user_id: int,
+    chat_id: int,
     text: str,
-    token: str,
     base: str,
 ) -> bool:
-    url = f"{base}/messages"
-    params = {"access_token": token, "user_id": str(user_id)}
-    payload = {"text": text}
+    url = f"{base}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "disable_web_page_preview": False}
     for attempt in range(1, _MAX_SEND_RETRIES + 2):
         try:
-            async with session.post(url, params=params, json=payload, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            async with session.post(
+                url, json=payload, timeout=aiohttp.ClientTimeout(total=15)
+            ) as resp:
                 if resp.status == 200:
                     return True
-                body = await resp.text()
-                logger.warning("MAX API %s for user %s (attempt %d): %s", resp.status, user_id, attempt, body)
+
+                try:
+                    data = await resp.json()
+                except Exception:
+                    data = {"raw": await resp.text()}
+
+                # Honour Telegram's "Too Many Requests" back-off hint.
+                if resp.status == 429:
+                    retry_after = int(
+                        (data.get("parameters") or {}).get("retry_after", _RETRY_DELAY)
+                    )
+                    logger.warning(
+                        "Telegram 429 for chat %s (attempt %d): retry after %ss",
+                        chat_id, attempt, retry_after,
+                    )
+                    if attempt <= _MAX_SEND_RETRIES:
+                        await asyncio.sleep(retry_after)
+                    continue
+
+                logger.warning(
+                    "Telegram API %s for chat %s (attempt %d): %s",
+                    resp.status, chat_id, attempt, data,
+                )
         except aiohttp.ClientError as e:
-            logger.warning("Send error for user %s (attempt %d): %s", user_id, attempt, e)
+            logger.warning("Send error for chat %s (attempt %d): %s", chat_id, attempt, e)
         if attempt <= _MAX_SEND_RETRIES:
             await asyncio.sleep(_RETRY_DELAY)
     return False
@@ -132,7 +154,9 @@ async def broadcast(text: str) -> int:
 
     async with aiohttp.ClientSession() as http:
         for sub in subscribers:
-            ok = await _post_message(http, sub.max_user_id, text, settings.max_bot_token, settings.max_api_base)
+            ok = await _post_message(
+                http, sub.telegram_user_id, text, settings.telegram_api_base
+            )
             if ok:
                 sent += 1
             await asyncio.sleep(_SEND_DELAY)
@@ -144,7 +168,7 @@ async def broadcast(text: str) -> int:
 async def send_to_user(user_id: int, text: str) -> bool:
     settings = get_settings()
     async with aiohttp.ClientSession() as http:
-        return await _post_message(http, user_id, text, settings.max_bot_token, settings.max_api_base)
+        return await _post_message(http, user_id, text, settings.telegram_api_base)
 
 
 # ---------------------------------------------------------------------------
@@ -181,14 +205,15 @@ async def send_today_notifications() -> None:
 
 async def register_webhook(webhook_url: str) -> None:
     settings = get_settings()
-    url = f"{settings.max_api_base}/subscriptions"
-    params = {"access_token": settings.max_bot_token}
-    payload = {"url": webhook_url}
+    url = f"{settings.telegram_api_base}/setWebhook"
+    payload = {"url": webhook_url, "allowed_updates": ["message", "edited_message"]}
     async with aiohttp.ClientSession() as http:
         try:
-            async with http.post(url, params=params, json=payload, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            async with http.post(
+                url, json=payload, timeout=aiohttp.ClientTimeout(total=15)
+            ) as resp:
                 body = await resp.json()
-                if resp.status == 200:
+                if resp.status == 200 and body.get("ok"):
                     logger.info("Webhook registered: %s", webhook_url)
                 else:
                     logger.error("Failed to register webhook (HTTP %s): %s", resp.status, body)
