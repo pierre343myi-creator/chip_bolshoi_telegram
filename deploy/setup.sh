@@ -1,9 +1,9 @@
 #!/bin/bash
-# First-time setup. Run as user bolshoi-bot from /home/bolshoi-bot/bolshoi-bot
+# First-time setup. Run as user bolshoi-bot from /home/bolshoi-bot/chip_bolshoi_telegram
 set -e
 
 echo "[setup] Creating virtual environment..."
-python3.11 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 echo "[setup] Installing dependencies..."
@@ -12,13 +12,6 @@ pip install -r requirements.txt --quiet
 
 echo "[setup] Downloading Camoufox browser..."
 python -m camoufox fetch
-
-echo "[setup] Downloading Yandex Cloud SSL certificate..."
-mkdir -p ~/.postgresql
-wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
-     -O ~/.postgresql/root.crt --quiet
-chmod 0600 ~/.postgresql/root.crt
-echo "       Certificate saved to ~/.postgresql/root.crt"
 
 echo "[setup] Applying database migrations..."
 alembic upgrade head
