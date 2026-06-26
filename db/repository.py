@@ -74,7 +74,7 @@ class SubscriberRepository:
 
     async def get(self, user_id: int) -> Subscriber | None:
         result = await self.session.execute(
-            select(Subscriber).where(Subscriber.max_user_id == user_id)
+            select(Subscriber).where(Subscriber.telegram_user_id == user_id)
         )
         return result.scalar_one_or_none()
 
@@ -86,7 +86,7 @@ class SubscriberRepository:
             sub.active = True
             await self.session.commit()
             return sub, not was_active
-        sub = Subscriber(max_user_id=user_id, active=True)
+        sub = Subscriber(telegram_user_id=user_id, active=True)
         self.session.add(sub)
         await self.session.commit()
         return sub, True
