@@ -133,9 +133,12 @@ async def main() -> None:
     await site.start()
     logger.info("Webhook server listening on port %d", settings.webhook_port)
 
-    # Run the first parse immediately on startup
-    from bot.scheduler import _parse_and_notify
-    asyncio.create_task(_parse_and_notify())
+    # On startup, immediately flush any advance notifications for events the
+    # external parser has already written to the DB, instead of waiting for the
+    # scheduler's first 30-minute tick. (The actual parsing is done separately
+    # by run_parser.py, so the bot server never parses bolshoi.ru itself.)
+    from bot.scheduler import _send_pending_advance_notifications
+    asyncio.create_task(_send_pending_advance_notifications())
 
     # Block forever
     stop_event = asyncio.Event()
