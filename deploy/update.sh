@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy update. Run as user bolshoi-bot from /home/bolshoi-bot/bolshoi-bot
+# Deploy update. Run as user bolshoi-bot from /home/bolshoi-bot/chip_bolshoi_telegram
 set -e
 
 echo "[update] Pulling latest code from GitHub..."
