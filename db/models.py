@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -31,7 +31,8 @@ class Event(Base):
 class Subscriber(Base):
     __tablename__ = "subscribers"
 
-    max_user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Telegram user/chat IDs can exceed the 32-bit range, so BigInteger is required.
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     subscribed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
